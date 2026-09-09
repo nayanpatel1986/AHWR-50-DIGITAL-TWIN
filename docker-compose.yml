@@ -1,0 +1,230 @@
+# ROM-II / AHWR Digital Twin — local stack.
+# Secrets come from .env (see .env.example). Only the frontend is published;
+# backend + InfluxDB stay on the internal network.
+# Quickstart (with synthetic live data):  docker compose --profile demo up -d --build
+
+name: ahwr-50-twin
+
+services:
+  influxdb:
+    image: influxdb:2.7
+    container_name: ahwr-50-twin-influxdb
+    restart: unless-stopped
+    # Resource bounds (audit remediation): the edge compose set no limits, so a
+    # runaway InfluxDB compaction could starve the rig node. InfluxDB is the heaviest
+    # edge consumer (TSM cache); tune to the box. Limits below suit a 4c/16GB rig PC.
+    cpus: 2.0
+    mem_limit: 2g
+    mem_reservation: 512m
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_USERNAME:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_PASSWORD:?set INFLUX_PASSWORD in .env}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUX_ORG:-romii_org}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUX_BUCKET:-romii_bucket}
+      - DOCKER_INFLUXDB_INIT_RETENTION=${INFLUX_RETENTION:-30d}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN:?set INFLUX_TOKEN in .env}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    # Uncomment to access the InfluxDB UI from the host (localhost only):
+    # ports:
+    #   - "127.0.0.1:8086:8086"
+
+  telegraf:
+    image: telegraf:offline-flat
+    entrypoint: []
+    container_name: ahwr-50-twin-telegraf
+    hostname: telegraf
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 512m
+    mem_reservation: 128m
+    # Hot-reload telegraf.conf when the backend rewrites it (no Docker socket needed).
+    # --config-directory loads telegraf.d/ (the outputs.health liveness probe) alongside
+    # the backend-managed telegraf.conf, so the managed PLC section is never disturbed.
+    command: telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d --watch-config=poll
+    volumes:
+      - ./telegraf:/etc/telegraf
+    environment:
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_ORG=${INFLUX_ORG:-romii_org}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-romii_bucket}
+    # Liveness (audit remediation: telegraf previously had NO healthcheck). The
+    # outputs.health plugin (telegraf/telegraf.d/health.conf) serves 200 while the agent
+    # and output pipeline are alive, 503 if the metric buffer wedges — so Docker now
+    # flips a hung-but-running collector to 'unhealthy' instead of only acting on a full
+    # crash. Data-freshness is separately scored by the backend /api/health/edge.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8888/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  backend:
+    image: ahwr-50-twin-backend:offline-flat
+    entrypoint: []
+    command: ["node", "server.js"]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ahwr-50-twin-backend
+    restart: unless-stopped
+    cpus: 1.5
+    mem_limit: 1g
+    mem_reservation: 256m
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DATA_DIR=/data
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_ORG=${INFLUX_ORG:-romii_org}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-romii_bucket}
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET in .env}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      - DATA_SOURCE=${DATA_SOURCE:-plc}
+      - MAX_WELL_DEPTH_M=${MAX_WELL_DEPTH_M:-100000}
+      - TELEGRAF_CONFIG_PATH=/telegraf/telegraf.conf
+      - CORS_ORIGIN=${CORS_ORIGIN:-}
+      # --- Sync agent (store-and-forward to central CRMF; outbound only) ---
+      - CENTRAL_URL=${CENTRAL_URL:-}
+      - DEVICE_ID=${DEVICE_ID:-AHWR-50-3}
+      - DEVICE_TOKEN=${DEVICE_TOKEN:-}
+      - SYNC_ENABLED=${SYNC_ENABLED:-false}
+      - SYNC_BATCH_SECONDS=${SYNC_BATCH_SECONDS:-10}
+      - SYNC_BUFFER_DAYS=${SYNC_BUFFER_DAYS:-15}
+      # --- ETP 2.0 publisher (outbound only) ---
+      - ETP_ENABLED=${ETP_ENABLED:-false}
+      - ETP_URL=${ETP_URL:-}
+      - ETP_STREAM_SECONDS=${ETP_STREAM_SECONDS:-5}
+      # --- Windows domain / Active Directory login ---
+      # Demo defaults target the bundled `openldap` test directory; in production
+      # override these in .env to point at the real Domain Controller (AD over LDAPS).
+      - AUTH_MODE=${AUTH_MODE:-both}             # local | ldap | both
+      - LDAP_URL=${LDAP_URL:-ldap://openldap:1389}
+      - LDAP_BIND_DN=${LDAP_BIND_DN:-cn=admin,dc=ahwr,dc=local}
+      - LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD:-adminpassword}
+      - LDAP_SEARCH_BASE=${LDAP_SEARCH_BASE:-ou=users,dc=ahwr,dc=local}
+      - LDAP_SEARCH_FILTER=${LDAP_SEARCH_FILTER:-(|(uid={username})(cn={username})(sAMAccountName={username}))}
+      - LDAP_DOMAIN=${LDAP_DOMAIN:-AHWR}
+      - LDAP_DEFAULT_ROLE=${LDAP_DEFAULT_ROLE:-viewer}
+      - LDAP_ROLE_ADMIN=${LDAP_ROLE_ADMIN:-rig-admins}
+      - LDAP_ROLE_OPERATOR=${LDAP_ROLE_OPERATOR:-rig-operators}
+      - LDAP_ROLE_VIEWER=${LDAP_ROLE_VIEWER:-rig-viewers}
+      - LDAP_STARTTLS=${LDAP_STARTTLS:-}
+      - LDAP_TLS_REJECT_UNAUTHORIZED=${LDAP_TLS_REJECT_UNAUTHORIZED:-false}
+    volumes:
+      - backend_data:/data
+      - ./telegraf:/telegraf   # backend rewrites the managed PLC section here
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    # No host port: the backend is reachable only via the frontend's nginx proxy.
+
+  frontend:
+    image: ahwr-50-twin-frontend:offline-flat
+    entrypoint: []
+    command: ["nginx", "-g", "daemon off;"]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: ahwr-50-twin-frontend
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 256m
+    mem_reservation: 64m
+    ports:
+      # Bind all host interfaces by default so the HMI follows the deployed PC's
+      # current LAN IP. Restrict FRONTEND_BIND in .env if the host firewall is not
+      # controlling access.
+      - "${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # Synthetic telemetry generator for local demos (no physical PLC).
+  # Enabled only with:  docker compose --profile demo up
+  mock:
+    build: ./mock
+    container_name: ahwr-50-twin-mock
+    restart: unless-stopped
+    profiles: ["demo"]
+    environment:
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_ORG=${INFLUX_ORG:-romii_org}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-romii_bucket}
+      - MOCK_INTERVAL_MS=${MOCK_INTERVAL_MS:-1000}
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  # OPC UA server simulator (demo) — provides real OPC UA nodes so the Telegraf
+  # opcua input can be validated end-to-end. Stands in for an OPC UA protocol device.
+  opc-plc:
+    image: mcr.microsoft.com/iotedge/opc-plc:2.12.29
+    container_name: ahwr-50-twin-opc-plc
+    hostname: opc-plc
+    restart: unless-stopped
+    profiles: ["demo"]
+    command: ["--autoaccept", "--unsecuretransport", "--portnum=50000", "--ph=opc-plc"]
+
+  # Dedicated OPC UA collector (demo) — separate Telegraf lane for the opcua input,
+  # independent of the S7comm collector (which fails closed without a real PLC).
+  telegraf-opcua:
+    image: telegraf:1.29
+    container_name: ahwr-50-twin-telegraf-opcua
+    restart: unless-stopped
+    profiles: ["demo"]
+    command: telegraf --config /etc/telegraf/opcua.conf
+    volumes:
+      - ./telegraf:/etc/telegraf
+    environment:
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_ORG=${INFLUX_ORG:-romii_org}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-romii_bucket}
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  # Test directory (demo) — mock AD/LDAP server (ldapjs) standing in for the Windows
+  # Domain Controller so the AD/LDAP login path is verifiable end-to-end. Seeds:
+  #   driller1/Driller@123 (rig-operators), toolpusher1/Push@123 (rig-admins),
+  #   viewer1/View@123 (rig-viewers). Admin bind: cn=admin,dc=ahwr,dc=local / adminpassword.
+  openldap:
+    build: ./ldap-test
+    container_name: ahwr-50-twin-openldap
+    hostname: openldap
+    restart: unless-stopped
+    profiles: ["demo"]
+    environment:
+      - LDAP_PORT=1389
+      - LDAP_ADMIN_PASSWORD=adminpassword
+
+volumes:
+  influxdb_data:
+  backend_data:

@@ -1,0 +1,41 @@
+# Secrets / environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build output
+frontend/dist/
+
+# Tooling artifacts (workflow scripts dropped by agent tooling — not project code)
+.workflow-scale.js
+
+# Runtime state (created at runtime / in volumes — never commit)
+backend/users.json
+backend/drilling_state.json
+backend/plc_config.json
+backend/dashboard_layout.json
+backend/history_debug.json
+volume_backups/
+telegraf/.cache/
+*.tmp
+
+# Logs & large captures
+*.log
+out.txt
+logs/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+# Offline images
+docker_images/
+offline_images/
+images/
+*.tar
+*.tar.sha256
+
