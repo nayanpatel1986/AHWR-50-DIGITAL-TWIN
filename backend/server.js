@@ -37,7 +37,7 @@ const DATA_DIR = process.env.DATA_DIR || __dirname;
 // --- SEED DEFAULTS ON FIRST BOOT ---
 const DEFAULTS_DIR = path.join(__dirname, 'defaults');
 if (fs.existsSync(DEFAULTS_DIR)) {
-    const filesToSeed = ['plc_config.json', 'users.json', 'dashboard_layout.json', 'alarms_config.json'];
+    const filesToSeed = ['plc_config.json', 'bop_config.json', 'users.json', 'dashboard_layout.json', 'alarms_config.json'];
     for (const file of filesToSeed) {
         const defaultPath = path.join(DEFAULTS_DIR, file);
         const targetPath = path.join(DATA_DIR, file);
@@ -183,6 +183,39 @@ app.post('/api/config/plc', auth.requireAuth, auth.requireRole('admin'), async (
     } catch (err) {
         const status = err.status || 500;
         if (status >= 500) console.error('Error saving PLC config:', err);
+        res.status(status).json({ success: false, error: err.message });
+    }
+});
+
+// --- VersaMax / KEPServerEX OPC UA BOP configuration API ------------------
+const BOP_CONFIG_FILE = path.join(DATA_DIR, 'bop_config.json');
+const defaultBopConfig = () => ({
+    enabled: true,
+    endpoint: 'opc.tcp://host.docker.internal:49320',
+    securityMode: 'None',
+    securityPolicy: 'None',
+    tags: [
+        ['annular_open', 'Annular Open'], ['annular_close', 'Annular Close'],
+        ['upper_ram_open', 'Upper Ram Open'], ['upper_ram_close', 'Upper Ram Close'],
+        ['lower_ram_open', 'Lower Ram Open'], ['lower_ram_close', 'Lower Ram Close'],
+        ['accumulator_pressure', 'Accumulator Pressure'], ['manifold_pressure', 'Manifold Pressure'],
+        ['annular_pressure', 'Annular Pressure'], ['air_pressure', 'Air Pressure']
+    ].map(([field, name]) => ({ name, field, nodeId: '', unit: '', enabled: true }))
+});
+const getBopConfig = () => readJsonSync(BOP_CONFIG_FILE, defaultBopConfig());
+
+app.get('/api/config/bop', auth.requireAuth, (req, res) => {
+    res.json(getBopConfig());
+});
+
+app.post('/api/config/bop', auth.requireAuth, auth.requireRole('admin'), async (req, res) => {
+    try {
+        const config = validate.validateBopConfig(req.body);
+        await writeJsonAtomic(BOP_CONFIG_FILE, config);
+        res.json({ success: true, message: 'OPC UA BOP configuration saved.' });
+    } catch (err) {
+        const status = err.status || 500;
+        if (status >= 500) console.error('Error saving BOP config:', err);
         res.status(status).json({ success: false, error: err.message });
     }
 });

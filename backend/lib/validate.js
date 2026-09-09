@@ -22,6 +22,9 @@ const S7_ADDR_RE = /^DB\d+\.[A-Za-z]+\d+(\.\d+)?$/; // e.g. DB3191.R0, DB244.X10
 const MODBUS_ADDR_RE = /^\d+(\s*,\s*\d+)*$/;        // e.g. 0  or  0, 1
 const DATA_TYPE_RE = /^(INT16|UINT16|INT32|UINT32|INT64|UINT64|FLOAT32|FLOAT64)$/i;
 const REG_TYPE_RE = /^(discrete_input|coil|holding_register|input_register)$/;
+const OPCUA_SECURITY_MODE_RE = /^(None|Sign|SignAndEncrypt)$/;
+const OPCUA_SECURITY_POLICY_RE = /^(|None|Basic128Rsa15|Basic256|Basic256Sha256|Aes128_Sha256_RsaOaep|Aes256_Sha256_RsaPss)$/;
+const OPCUA_NODE_ID_RE = /^(|ns=\d+;[isgbd]=.+)$/;
 
 // A free-text name (slave/metric/field name) that will be embedded inside a
 // double-quoted TOML string. Reject anything that could break out of the quote
@@ -114,6 +117,43 @@ function validatePlcConfig(config) {
     return config;
 }
 
+// Validate the admin-managed VersaMax / KEPServerEX OPC UA settings. Node IDs
+// are intentionally optional so the UI can be prepared before Kepware tags are
+// finalized; empty IDs are ignored by the collector.
+function validateBopConfig(config) {
+    if (!config || typeof config !== 'object') throw new ValidationError('BOP config must be an object');
+    const endpoint = String(config.endpoint || '');
+    if (!/^opc\.tcp:\/\/[^\s]+$/i.test(endpoint) || endpoint.length > 512) {
+        throw new ValidationError('BOP endpoint must be a valid opc.tcp:// URL');
+    }
+    if (!OPCUA_SECURITY_MODE_RE.test(String(config.securityMode || 'None'))) {
+        throw new ValidationError('Invalid OPC UA security mode');
+    }
+    if (!OPCUA_SECURITY_POLICY_RE.test(String(config.securityPolicy || 'None'))) {
+        throw new ValidationError('Invalid OPC UA security policy');
+    }
+    if (typeof config.enabled !== 'boolean') throw new ValidationError('BOP enabled must be boolean');
+    const tags = Array.isArray(config.tags) ? config.tags : [];
+    if (tags.length > 64) throw new ValidationError('Too many BOP tags (max 64)');
+    for (const tag of tags) {
+        if (!tag || typeof tag !== 'object') throw new ValidationError('Each BOP tag must be an object');
+        assertTomlSafe(String(tag.name || ''), 'BOP tag.name');
+        assertTomlSafe(String(tag.field || ''), 'BOP tag.field');
+        if (tag.unit !== undefined) assertTomlSafe(String(tag.unit), 'BOP tag.unit');
+        if (!OPCUA_NODE_ID_RE.test(String(tag.nodeId || ''))) {
+            throw new ValidationError(`Invalid OPC UA Node ID for ${tag.name}`);
+        }
+        if (typeof tag.enabled !== 'boolean') throw new ValidationError(`BOP tag.enabled must be boolean for ${tag.name}`);
+    }
+    return {
+        ...config,
+        endpoint,
+        securityMode: String(config.securityMode || 'None'),
+        securityPolicy: String(config.securityPolicy || 'None'),
+        tags: tags.map(tag => ({ ...tag, nodeId: String(tag.nodeId || '') }))
+    };
+}
+
 // Validate a finite number within bounds (drilling calibration inputs).
 function num(v, label, { min = -Infinity, max = Infinity } = {}) {
     const n = Number(v);
@@ -128,6 +168,6 @@ const ROLES = ['admin', 'operator', 'viewer'];
 module.exports = {
     ValidationError,
     isFluxRange, isFluxInstant,
-    validatePlcConfig, assertTomlSafe,
+    validatePlcConfig, validateBopConfig, assertTomlSafe,
     num, USERNAME_RE, ROLES,
 };

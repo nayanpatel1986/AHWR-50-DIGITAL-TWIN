@@ -39,6 +39,13 @@ export default function AdminPanel() {
     }
     const [value, setValue] = useState(0);
     const [config, setConfig] = useState({ slaves: [] });
+    const [bopConfig, setBopConfig] = useState({
+        enabled: true,
+        endpoint: 'opc.tcp://host.docker.internal:49320',
+        securityMode: 'None',
+        securityPolicy: 'None',
+        tags: []
+    });
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
@@ -192,9 +199,23 @@ export default function AdminPanel() {
         }
     };
 
+    const fetchBopConfig = async () => {
+        try {
+            setLoading(true);
+            const res = await axios.get('/api/config/bop');
+            setBopConfig(res.data);
+        } catch (err) {
+            console.error(err);
+            showNotification('Failed to load OPC UA BOP configuration', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (value === 0) fetchConfig();
-        if (value === 1) fetchUsers();
+        if (value === 1) fetchBopConfig();
+        if (value === 2) fetchUsers();
     }, [value]);
 
     const handleChange = (event, newValue) => {
@@ -346,11 +367,32 @@ export default function AdminPanel() {
         }
     };
 
+    const updateBop = (field, nextValue) => setBopConfig(prev => ({ ...prev, [field]: nextValue }));
+    const updateBopTag = (index, field, nextValue) => {
+        setBopConfig(prev => ({
+            ...prev,
+            tags: prev.tags.map((tag, i) => i === index ? { ...tag, [field]: nextValue } : tag)
+        }));
+    };
+    const saveBopConfiguration = async () => {
+        try {
+            setLoading(true);
+            const res = await axios.post('/api/config/bop', bopConfig);
+            if (res.data.success) showNotification('OPC UA BOP configuration saved');
+        } catch (err) {
+            console.error(err);
+            showNotification(err.response?.data?.error || 'Failed to save OPC UA BOP configuration', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <Box sx={{ width: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: '#334155' }}>
                 <Tabs value={value} onChange={handleChange} textColor="primary" indicatorColor="primary">
                     <Tab label="PLC & S7 Configuration" sx={{ color: '#38bdf8', fontWeight: 'bold' }} />
+                    <Tab label="OPC UA / BOP Configuration" sx={{ color: '#fbbf24', fontWeight: 'bold' }} />
                     <Tab label="User Management" sx={{ color: '#94a3b8' }} />
                 </Tabs>
             </Box>
@@ -627,7 +669,80 @@ export default function AdminPanel() {
                 </Button>
             </TabPanel>
 
+            {/* TAB 1: VersaMax / KEPServerEX OPC UA BOP Configuration */}
             <TabPanel value={value} index={1}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, gap: 2, alignItems: 'flex-start' }}>
+                    <Box>
+                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 0.5, color: '#fbbf24' }}>OPC UA / VersaMax BOP Parameters</Typography>
+                        <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                            Configure the KEPServerEX OPC UA source. Siemens S7comm configuration is independent and unchanged.
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                        <Button variant="outlined" startIcon={<RefreshCw />} onClick={fetchBopConfig} sx={{ color: '#38bdf8', borderColor: '#334155' }}>Reload</Button>
+                        <Button variant="contained" startIcon={<Save />} onClick={saveBopConfiguration} disabled={loading} sx={{ bgcolor: '#34d399', '&:hover': { bgcolor: '#10b981' } }}>
+                            {loading ? 'Saving...' : 'Save BOP Settings'}
+                        </Button>
+                    </Box>
+                </Box>
+
+                <Paper sx={{ p: 3, mb: 3, bgcolor: '#1e293b', border: '1px solid #334155' }}>
+                    <Typography variant="subtitle1" sx={{ color: '#fbbf24', fontWeight: 'bold', mb: 2 }}>KEPServerEX OPC UA Connection</Typography>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                            <TextField label="OPC UA Endpoint" fullWidth size="small" value={bopConfig.endpoint || ''} onChange={(e) => updateBop('endpoint', e.target.value)} placeholder="opc.tcp://host.docker.internal:49320" sx={{ bgcolor: '#0f172a', input: { color: 'white' }, label: { color: '#94a3b8' }, '.MuiOutlinedInput-notchedOutline': { borderColor: '#334155' } }} />
+                        </Grid>
+                        <Grid item xs={12} md={2}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel sx={{ color: '#94a3b8' }}>Enabled</InputLabel>
+                                <Select label="Enabled" value={bopConfig.enabled ? 'true' : 'false'} onChange={(e) => updateBop('enabled', e.target.value === 'true')} sx={{ bgcolor: '#0f172a', color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: '#334155' }, '.MuiSvgIcon-root': { color: 'white' } }}>
+                                    <MenuItem value="true">Yes</MenuItem><MenuItem value="false">No</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={2}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel sx={{ color: '#94a3b8' }}>Security Mode</InputLabel>
+                                <Select label="Security Mode" value={bopConfig.securityMode || 'None'} onChange={(e) => updateBop('securityMode', e.target.value)} sx={{ bgcolor: '#0f172a', color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: '#334155' }, '.MuiSvgIcon-root': { color: 'white' } }}>
+                                    <MenuItem value="None">None</MenuItem><MenuItem value="Sign">Sign</MenuItem><MenuItem value="SignAndEncrypt">Sign & Encrypt</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={2}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel sx={{ color: '#94a3b8' }}>Security Policy</InputLabel>
+                                <Select label="Security Policy" value={bopConfig.securityPolicy || 'None'} onChange={(e) => updateBop('securityPolicy', e.target.value)} sx={{ bgcolor: '#0f172a', color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: '#334155' }, '.MuiSvgIcon-root': { color: 'white' } }}>
+                                    <MenuItem value="None">None</MenuItem><MenuItem value="Basic256Sha256">Basic256Sha256</MenuItem><MenuItem value="Aes128_Sha256_RsaOaep">Aes128-Sha256</MenuItem><MenuItem value="Aes256_Sha256_RsaPss">Aes256-Sha256</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                    </Grid>
+                    <Alert severity="info" sx={{ mt: 2, bgcolor: 'rgba(14,165,233,0.10)', color: '#bae6fd' }}>
+                        Enter the real Kepware Node IDs below, for example <code>ns=2;s=Channel1.Device1.R1</code>. Do not use the display path unless Kepware confirms it is the Node ID.
+                    </Alert>
+                </Paper>
+
+                <Paper sx={{ p: 3, bgcolor: '#1e293b', border: '1px solid #334155' }}>
+                    <Typography variant="subtitle1" sx={{ color: '#fbbf24', fontWeight: 'bold', mb: 1 }}>BOP Parameters</Typography>
+                    <Typography variant="caption" sx={{ display: 'block', mb: 2, color: '#94a3b8' }}>Node IDs are intentionally blank until confirmed in KEPServerEX. Blank rows are retained as placeholders and will not be read.</Typography>
+                    <TableContainer sx={{ overflowX: 'auto' }}>
+                        <Table size="small" sx={{ minWidth: 920 }}>
+                            <TableHead><TableRow>
+                                <TableCell sx={{ color: '#94a3b8' }}>Enabled</TableCell><TableCell sx={{ color: '#94a3b8' }}>Parameter</TableCell><TableCell sx={{ color: '#94a3b8' }}>Field</TableCell><TableCell sx={{ color: '#94a3b8' }}>Kepware Node ID</TableCell><TableCell sx={{ color: '#94a3b8' }}>Unit</TableCell>
+                            </TableRow></TableHead>
+                            <TableBody>{(bopConfig.tags || []).map((tag, index) => <TableRow key={tag.field || index}>
+                                <TableCell><Select variant="standard" value={tag.enabled ? 'true' : 'false'} onChange={(e) => updateBopTag(index, 'enabled', e.target.value === 'true')} sx={{ color: 'white', minWidth: 70 }}><MenuItem value="true">Yes</MenuItem><MenuItem value="false">No</MenuItem></Select></TableCell>
+                                <TableCell><TextField variant="standard" fullWidth size="small" value={tag.name || ''} onChange={(e) => updateBopTag(index, 'name', e.target.value)} InputProps={{ disableUnderline: true, sx: { color: 'white' } }} /></TableCell>
+                                <TableCell><TextField variant="standard" fullWidth size="small" value={tag.field || ''} onChange={(e) => updateBopTag(index, 'field', e.target.value)} InputProps={{ disableUnderline: true, sx: { color: '#94a3b8', fontFamily: 'monospace' } }} /></TableCell>
+                                <TableCell><TextField variant="standard" fullWidth size="small" value={tag.nodeId || ''} onChange={(e) => updateBopTag(index, 'nodeId', e.target.value)} placeholder="ns=2;s=..." InputProps={{ disableUnderline: true, sx: { color: 'white', fontFamily: 'monospace' } }} /></TableCell>
+                                <TableCell><TextField variant="standard" size="small" value={tag.unit || ''} onChange={(e) => updateBopTag(index, 'unit', e.target.value)} placeholder="bar / state" InputProps={{ disableUnderline: true, sx: { color: 'white' } }} /></TableCell>
+                            </TableRow>)}</TableBody>
+                        </Table>
+                    </TableContainer>
+                </Paper>
+            </TabPanel>
+
+            <TabPanel value={value} index={2}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
                     <Typography variant="h6">User Management</Typography>
                     <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => handleOpenUserDialog()} sx={{ bgcolor: '#38bdf8', '&:hover': { bgcolor: '#0ea5e9' } }}>
