@@ -400,7 +400,7 @@ const { FIELD_MAP, getFieldMapping } = require('./lib/fieldmap');
 
 // Measurements polled for the live view (S7comm writes under "AHWR";
 // app-level measurements support mock/Modbus sources). Shared with /api/history.
-const LIVE_MEASUREMENTS = ['drawworks', 'engine', 'mudpump', 'wellcontrol', 'wellhead', 'safety', 'opcua_demo', 'modbus', 'AHWR', 'fluid', 'drilling', 'hpu', 'htd', 'acs', 'cat_engine', 'cwk', 'pct'];
+const LIVE_MEASUREMENTS = ['drawworks', 'engine', 'mudpump', 'wellcontrol', 'bop', 'wellhead', 'safety', 'opcua_demo', 'modbus', 'AHWR', 'fluid', 'drilling', 'hpu', 'htd', 'acs', 'cat_engine', 'cwk', 'pct'];
 
 const HISTORY_METRICS = new Set(edrCatalog.categories.flatMap(category =>
     category.fields.map(field => `${category.id}.${field.id}`)
@@ -571,7 +571,41 @@ const queryData = async () => {
         // Well control / BOP: present ONLY when a real source exists. Never
         // coalesce safety-critical ram/pressure signals to a benign false/0 state.
         const wc = data.wellcontrol;
-        if (wc && Object.keys(wc).length > 0) {
+        const bop = data.bop;
+        if (bop && Object.keys(bop).length > 0) {
+            data.bop = {
+                annular_open: bop.annular_open ?? null,
+                annular_close: bop.annular_close ?? null,
+                upper_ram_open: bop.upper_ram_open ?? null,
+                upper_ram_close: bop.upper_ram_close ?? null,
+                lower_ram_open: bop.lower_ram_open ?? null,
+                lower_ram_close: bop.lower_ram_close ?? null,
+                accumulator_pressure: bop.accumulator_pressure ?? null,
+                manifold_pressure: bop.manifold_pressure ?? null,
+                annular_pressure: bop.annular_pressure ?? null,
+                air_pressure: bop.air_pressure ?? null,
+                source: 'versamax',
+                connected: true,
+                quality: 'good',
+                lastUpdate: new Date(now).toISOString()
+            };
+            // Keep the existing Well Control contract so current screens and
+            // consumers continue to work while BOP gets its own namespace.
+            data.well_control = {
+                available: true,
+                annular_pressure: data.bop.annular_pressure,
+                manifold_pressure: data.bop.manifold_pressure,
+                accumulator_pressure: data.bop.accumulator_pressure,
+                annular_open: data.bop.annular_open,
+                annular_close: data.bop.annular_close,
+                pipe_ram_open: data.bop.upper_ram_open,
+                pipe_ram_close: data.bop.upper_ram_close,
+                blind_ram_open: data.bop.lower_ram_open,
+                blind_ram_close: data.bop.lower_ram_close,
+                shear_ram_open: null,
+                source: 'versamax'
+            };
+        } else if (wc && Object.keys(wc).length > 0) {
             data.well_control = {
                 available: true,
                 annular_pressure: wc.annular_pressure ?? null,
@@ -585,8 +619,20 @@ const queryData = async () => {
                 blind_ram_close: wc.blind_ram_close ?? null,
                 shear_ram_open: wc.shear_ram_open ?? null
             };
+            data.bop = {
+                source: 'unknown',
+                connected: false,
+                quality: 'disconnected',
+                lastUpdate: null
+            };
         } else {
             data.well_control = { available: false };
+            data.bop = {
+                source: 'versamax',
+                connected: false,
+                quality: 'disconnected',
+                lastUpdate: null
+            };
         }
         delete data.wellcontrol;
 

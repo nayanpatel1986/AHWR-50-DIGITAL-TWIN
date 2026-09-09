@@ -115,6 +115,7 @@ export default function RigOverview() {
         hpu_htd1_status: 0, hpu_htd1_flow_sp: 0, hpu_htd1_flow: 0, hpu_htd1_press_sp: 0, hpu_htd1_press: 0,
         hpu_htd2_status: 0, hpu_htd2_flow_sp: 0, hpu_htd2_flow: 0, hpu_htd2_press_sp: 0, hpu_htd2_press: 0,
         hpu_filter_1: 0, hpu_filter_2: 0, hpu_filter_3: 0
+        ,bop: { connected: false, quality: 'disconnected' }
     });
     const [trendData, setTrendData] = useState({
         hook_load: [],
@@ -421,6 +422,7 @@ export default function RigOverview() {
             acs_status: newData.acs?.status || 0,
 
             // Digital Inputs - Calculated locally below
+            bop: newData.bop || { connected: false, quality: 'disconnected' },
         };
 
         // Local status calculation
@@ -953,6 +955,14 @@ export default function RigOverview() {
     const htdStatus = getStatusLabel('htd_status', rigData.htd_status) || { label: 'UNKNOWN', color: '#94a3b8' };
     const pctStatus = getStatusLabel('pct_status', rigData.pct_status) || { label: 'OFF', color: '#ef4444' };
     const engineStatus = getStatusLabel('engine_status', rigData.engine_status) || { label: 'UNKNOWN', color: '#94a3b8' };
+    const bopQuality = rigData.bop?.quality || 'disconnected';
+    const bopQualityLabel = bopQuality === 'good' ? 'GOOD' : (bopQuality === 'stale' ? 'STALE' : (bopQuality === 'bad_quality' ? 'BAD QUALITY' : 'DISCONNECTED'));
+    const bopQualityColor = bopQuality === 'good' ? '#22c55e' : (bopQuality === 'stale' ? '#fbbf24' : '#ef4444');
+    const bopNumber = (key, unit = '') => {
+        const value = Number(rigData.bop?.[key]);
+        return Number.isFinite(value) ? `${value.toFixed(2)}${unit ? ` ${unit}` : ''}` : '--';
+    };
+    const bopBool = (key) => rigData.bop?.[key] === null || rigData.bop?.[key] === undefined ? '--' : (Number(rigData.bop[key]) > 0 ? 'OPEN' : 'CLOSED');
     const pctClampStatus = (value) => getStatusLabel('cwk_clamp_status', value) || { label: 'NONE', color: '#94a3b8' };
     const dollyValue = Number(rigData.pct_dolly_status);
     const dollyLabels = ['NONE', 'OUT PARK', 'MOVE WORK', 'MOVE PARK', 'IN PARK', 'FAULT', 'IN WORK'];
@@ -1131,6 +1141,29 @@ export default function RigOverview() {
                                 ))}
                             </Box>
                         </Box>
+                    </Box>
+                </Paper>
+
+                <Paper sx={{ ...panelSx, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.25 }}>
+                        <Typography sx={{ color: '#fbbf24', fontWeight: 900, fontSize: 16 }}>WELL CONTROL / BOP</Typography>
+                        <Typography component="span" sx={{ color: bopQualityColor, border: `1px solid ${bopQualityColor}`, borderRadius: 1, px: 1, py: 0.3, fontSize: 11, fontWeight: 900 }}>{bopQualityLabel}</Typography>
+                    </Box>
+                    <Typography sx={{ color: '#64748b', fontSize: 11, mb: 1 }}>SOURCE: {String(rigData.bop?.source || 'VERSAMAX').toUpperCase()}</Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.85, flex: 1 }}>
+                        {[
+                            ['ANNULAR', bopBool('annular_close')],
+                            ['UPPER RAM', bopBool('upper_ram_close')],
+                            ['LOWER RAM', bopBool('lower_ram_close')],
+                            ['ACCUMULATOR', bopNumber('accumulator_pressure', 'PSI')],
+                            ['MANIFOLD', bopNumber('manifold_pressure', 'PSI')],
+                            ['ANNULAR PRESS', bopNumber('annular_pressure', 'PSI')]
+                        ].map(([label, display]) => (
+                            <Box key={label} sx={{ px: 1, py: 0.8, border: '1px solid #26384d', borderRadius: 1, bgcolor: '#07111d', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: 10, fontWeight: 800 }}>{label}</Typography>
+                                <Typography sx={{ color: bopQuality === 'good' ? '#4ade80' : '#64748b', fontSize: 15, fontWeight: 900 }}>{display}</Typography>
+                            </Box>
+                        ))}
                     </Box>
                 </Paper>
             </Box>
