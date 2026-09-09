@@ -131,6 +131,40 @@ services:
     depends_on:
       influxdb:
         condition: service_healthy
+
+  # Dedicated VersaMax / KEPServerEX OPC UA lane. This is independent of the
+  # Siemens S7comm Telegraf lane above, so OPC UA failures cannot stop S7 data.
+  bop-collector:
+    build:
+      context: .
+      dockerfile: bop-collector/Dockerfile
+    image: ahwr-50-twin-bop-collector:offline-flat
+    container_name: ahwr-50-twin-bop-collector
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 256m
+    environment:
+      - KEPWARE_OPCUA_URL=${KEPWARE_OPCUA_URL:-opc.tcp://host.docker.internal:49320}
+      - KEPWARE_OPCUA_USERNAME=${KEPWARE_OPCUA_USERNAME:-}
+      - KEPWARE_OPCUA_PASSWORD=${KEPWARE_OPCUA_PASSWORD:-}
+      - KEPWARE_SECURITY_POLICY=${KEPWARE_SECURITY_POLICY:-}
+      - KEPWARE_SECURITY_MODE=${KEPWARE_SECURITY_MODE:-}
+      - KEPWARE_CERT_PATH=${KEPWARE_CERT_PATH:-}
+      - KEPWARE_PRIVATE_KEY_PATH=${KEPWARE_PRIVATE_KEY_PATH:-}
+      - BOP_CONFIG_PATH=/config/bop_config.json
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_ORG=${INFLUX_ORG:-romii_org}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-romii_bucket}
+      - BOP_RECONNECT_INITIAL_SECONDS=${BOP_RECONNECT_INITIAL_SECONDS:-2}
+      - BOP_RECONNECT_MAX_SECONDS=${BOP_RECONNECT_MAX_SECONDS:-60}
+    volumes:
+      - backend_data:/config:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/healthz >/dev/null 2>&1 || exit 1"]
       interval: 10s
