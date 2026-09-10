@@ -78,8 +78,8 @@ New-Item -ItemType Directory -Force -Path $OutputDir, $ImagesDir, $VolumesDir | 
 Write-Step "Checking Docker"
 Run-Exe docker @('version')
 
-Write-Step "Building current frontend/backend images"
-Run-Exe docker @('compose', '-p', $ProjectName, '--env-file', '.env.example', 'build', 'backend', 'frontend') $RepoRoot
+Write-Step "Building current frontend/backend/BOP collector images"
+Run-Exe docker @('compose', '-p', $ProjectName, '--env-file', '.env.example', 'build', 'backend', 'frontend', 'bop-collector') $RepoRoot
 
 Write-Step "Ensuring helper image is available"
 Run-Exe docker @('pull', 'alpine:3.20')
@@ -122,8 +122,9 @@ try {
         'telegraf:1.29',
         'influxdb:2.7',
         'alpine:3.20',
-        'ahwr-50-twin-frontend',
-        'ahwr-50-twin-backend'
+        'ahwr-50-twin-frontend:offline-flat',
+        'ahwr-50-twin-backend:offline-flat',
+        'ahwr-50-twin-bop-collector:offline-flat'
     )
     Run-Exe docker (@('save', '-o', $ImageTar) + $images)
 

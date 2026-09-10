@@ -140,7 +140,7 @@ try {
         docker load -i $imagesArchive
     }
 
-    $requiredImages = @('ahwr-50-twin-backend:offline-flat', 'ahwr-50-twin-frontend:offline-flat', 'telegraf:offline-flat', 'influxdb:2.7')
+    $requiredImages = @('ahwr-50-twin-backend:offline-flat', 'ahwr-50-twin-frontend:offline-flat', 'ahwr-50-twin-bop-collector:offline-flat', 'telegraf:offline-flat', 'influxdb:2.7')
     foreach ($requiredImage in $requiredImages) {
         docker image inspect $requiredImage *> $null
         if ($LASTEXITCODE -ne 0) {
