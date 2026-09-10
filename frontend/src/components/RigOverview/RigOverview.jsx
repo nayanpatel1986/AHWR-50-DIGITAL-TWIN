@@ -1154,6 +1154,7 @@ export default function RigOverview() {
                         {[
                             ['ANNULAR', bopBool('annular_close')],
                             ['PIPE RAM', bopBool('lower_ram_close')],
+                            ['BLIND RAM', bopBool('blind_ram_close')],
                             ['ACCUMULATOR', bopNumber('accumulator_pressure', 'PSI')],
                             ['MANIFOLD', bopNumber('manifold_pressure', 'PSI')],
                             ['ANNULAR PRESS', bopNumber('annular_pressure', 'PSI')]

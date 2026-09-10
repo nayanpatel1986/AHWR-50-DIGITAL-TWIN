@@ -357,6 +357,24 @@
           "plcTag": "bop.lower_ram_close"
         },
         {
+          "id": "blind_ram_open",
+          "label": "Blind Ram Open",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.blind_ram_open"
+        },
+        {
+          "id": "blind_ram_close",
+          "label": "Blind Ram Close",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.blind_ram_close"
+        },
+        {
           "id": "accumulator_pressure",
           "label": "Accumulator Pressure",
           "unit": "psi",

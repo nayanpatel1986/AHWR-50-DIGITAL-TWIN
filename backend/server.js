@@ -198,6 +198,7 @@ const defaultBopConfig = () => ({
         ['annular_open', 'Annular Open'], ['annular_close', 'Annular Close'],
         ['upper_ram_open', 'Upper Ram Open'], ['upper_ram_close', 'Upper Ram Close'],
         ['lower_ram_open', 'Lower Pipe Ram Open'], ['lower_ram_close', 'Lower Pipe Ram Close'],
+        ['blind_ram_open', 'Blind Ram Open'], ['blind_ram_close', 'Blind Ram Close'],
         ['accumulator_pressure', 'Accumulator Pressure'], ['manifold_pressure', 'Manifold Pressure'],
         ['annular_pressure', 'Annular Pressure'], ['air_pressure', 'Air Pressure']
     ].map(([field, name]) => ({ name, field, nodeId: '', unit: '', enabled: true }))
@@ -591,6 +592,8 @@ const queryData = async () => {
                 upper_ram_close: bop.upper_ram_close ?? null,
                 lower_ram_open: bop.lower_ram_open ?? null,
                 lower_ram_close: bop.lower_ram_close ?? null,
+                blind_ram_open: bop.blind_ram_open ?? null,
+                blind_ram_close: bop.blind_ram_close ?? null,
                 accumulator_pressure: bop.accumulator_pressure ?? null,
                 manifold_pressure: bop.manifold_pressure ?? null,
                 annular_pressure: bop.annular_pressure ?? null,
@@ -611,8 +614,8 @@ const queryData = async () => {
                 annular_close: data.bop.annular_close,
                 pipe_ram_open: data.bop.lower_ram_open,
                 pipe_ram_close: data.bop.lower_ram_close,
-                blind_ram_open: null,
-                blind_ram_close: null,
+                blind_ram_open: data.bop.blind_ram_open,
+                blind_ram_close: data.bop.blind_ram_close,
                 shear_ram_open: null,
                 source: 'versamax'
             };

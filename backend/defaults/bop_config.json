@@ -10,6 +10,8 @@
     { "name": "Upper Ram Close", "field": "upper_ram_close", "nodeId": "", "unit": "", "enabled": true },
     { "name": "Lower Pipe Ram Open", "field": "lower_ram_open", "nodeId": "", "unit": "", "enabled": true },
     { "name": "Lower Pipe Ram Close", "field": "lower_ram_close", "nodeId": "", "unit": "", "enabled": true },
+    { "name": "Blind Ram Open", "field": "blind_ram_open", "nodeId": "", "unit": "", "enabled": true },
+    { "name": "Blind Ram Close", "field": "blind_ram_close", "nodeId": "", "unit": "", "enabled": true },
     { "name": "Accumulator Pressure", "field": "accumulator_pressure", "nodeId": "", "unit": "", "enabled": true },
     { "name": "Manifold Pressure", "field": "manifold_pressure", "nodeId": "", "unit": "", "enabled": true },
     { "name": "Annular Pressure", "field": "annular_pressure", "nodeId": "", "unit": "", "enabled": true },
