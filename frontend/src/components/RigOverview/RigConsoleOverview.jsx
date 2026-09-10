@@ -580,10 +580,9 @@ export default function RigConsoleOverview() {
         {
             id: 'wctl', label: 'WELL CONTROL', side: 'r', color: A.crit, route: '/wellcontrol', stat: wcStat,
             params: [
-                { k: 'TUBING P', v: sv(wh.tubing_pressure, 1), u: 'bar', dk: 'wellhead.tubing_pressure' },
-                { k: 'CASING P', v: sv(wh.casing_pressure, 1), u: 'bar', dk: 'wellhead.casing_pressure' },
                 { k: 'ACCUM', v: wcv(wc.accumulator_pressure, 0), u: 'psi', dk: 'well_control.accumulator_pressure' },
                 { k: 'ANNULAR', v: wcv(wc.annular_pressure, 0), u: 'psi' },
+                { k: 'MANIFOLD', v: wcv(wc.manifold_pressure, 0), u: 'psi' },
             ],
         },
     ];
@@ -1084,8 +1083,6 @@ const primaryPanelHeight = Math.round(overviewBodyMinHeight * (compactOverview ?
                                 { k: 'ACCUM', v: wcv(wc.accumulator_pressure, 0), u: 'psi', dk: 'well_control.accumulator_pressure' },
                                 { k: 'ANNULAR', v: wcv(wc.annular_pressure, 0), u: 'psi' },
                                 { k: 'MANIFOLD', v: wcv(wc.manifold_pressure, 0), u: 'psi' },
-                                { k: 'TUBING', v: sv(wh.tubing_pressure, 1), u: 'bar', dk: 'wellhead.tubing_pressure' },
-                                { k: 'CASING', v: sv(wh.casing_pressure, 1), u: 'bar', dk: 'wellhead.casing_pressure' },
                             ].map((p) => {
                                 const pa = alarmFor(p.dk);
                                 return (
