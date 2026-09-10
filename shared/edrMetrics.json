@@ -299,6 +299,102 @@
       ]
     },
     {
+      "id": "bop",
+      "label": "BOP / VersaMax",
+      "fields": [
+        {
+          "id": "annular_open",
+          "label": "Annular Open",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.annular_open"
+        },
+        {
+          "id": "annular_close",
+          "label": "Annular Close",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.annular_close"
+        },
+        {
+          "id": "upper_ram_open",
+          "label": "Upper Pipe Ram Open",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.upper_ram_open"
+        },
+        {
+          "id": "upper_ram_close",
+          "label": "Upper Pipe Ram Close",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.upper_ram_close"
+        },
+        {
+          "id": "lower_ram_open",
+          "label": "Lower Ram Open",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.lower_ram_open"
+        },
+        {
+          "id": "lower_ram_close",
+          "label": "Lower Ram Close",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.lower_ram_close"
+        },
+        {
+          "id": "accumulator_pressure",
+          "label": "Accumulator Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "bop.accumulator_pressure"
+        },
+        {
+          "id": "manifold_pressure",
+          "label": "Manifold Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "bop.manifold_pressure"
+        },
+        {
+          "id": "annular_pressure",
+          "label": "Annular Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "bop.annular_pressure"
+        },
+        {
+          "id": "air_pressure",
+          "label": "Rig Air Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "bop.air_pressure"
+        }
+      ]
+    },
+    {
       "id": "cat_engine",
       "label": "CAT Engine",
       "fields": [
