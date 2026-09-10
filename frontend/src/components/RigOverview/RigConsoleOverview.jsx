@@ -503,8 +503,8 @@ export default function RigConsoleOverview() {
     const ramState = (closeFlag, openFlag) => (closeFlag ? 'CLOSED' : openFlag ? 'OPEN' : 'NO DATA');
     const rams = [
         { name: 'ANNULAR', state: wcLive ? ramState(wc.annular_close, wc.annular_open) : 'NO DATA' },
-        { name: 'PIPE RAM', state: wcLive ? ramState(wc.pipe_ram_close, wc.pipe_ram_open) : 'NO DATA' },
-        { name: 'BLIND RAM', state: wcLive ? ramState(wc.blind_ram_close, wc.blind_ram_open) : 'NO DATA' },
+        { name: 'LOWER PIPE RAM', state: wcLive ? ramState(wc.pipe_ram_close, wc.pipe_ram_open) : 'NO DATA' },
+        { name: 'BLIND RAM', state: 'NO DATA' },
     ];
     const wcStat = !feed.connected ? { text: 'SOCKET DOWN', color: '#ef4444' }
         : wc.available === false ? { text: 'NO BOP SOURCE', color: '#ef4444' }

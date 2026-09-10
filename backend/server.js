@@ -197,12 +197,22 @@ const defaultBopConfig = () => ({
     tags: [
         ['annular_open', 'Annular Open'], ['annular_close', 'Annular Close'],
         ['upper_ram_open', 'Upper Ram Open'], ['upper_ram_close', 'Upper Ram Close'],
-        ['lower_ram_open', 'Lower Ram Open'], ['lower_ram_close', 'Lower Ram Close'],
+        ['lower_ram_open', 'Lower Pipe Ram Open'], ['lower_ram_close', 'Lower Pipe Ram Close'],
         ['accumulator_pressure', 'Accumulator Pressure'], ['manifold_pressure', 'Manifold Pressure'],
         ['annular_pressure', 'Annular Pressure'], ['air_pressure', 'Air Pressure']
     ].map(([field, name]) => ({ name, field, nodeId: '', unit: '', enabled: true }))
 });
-const getBopConfig = () => readJsonSync(BOP_CONFIG_FILE, defaultBopConfig());
+const getBopConfig = () => {
+    const config = readJsonSync(BOP_CONFIG_FILE, defaultBopConfig());
+    return {
+        ...config,
+        tags: (config.tags || []).map((tag) => tag.field === 'lower_ram_open'
+            ? { ...tag, name: 'Lower Pipe Ram Open' }
+            : tag.field === 'lower_ram_close'
+                ? { ...tag, name: 'Lower Pipe Ram Close' }
+                : tag)
+    };
+};
 
 app.get('/api/config/bop', auth.requireAuth, (req, res) => {
     res.json(getBopConfig());
@@ -599,10 +609,10 @@ const queryData = async () => {
                 accumulator_pressure: data.bop.accumulator_pressure,
                 annular_open: data.bop.annular_open,
                 annular_close: data.bop.annular_close,
-                pipe_ram_open: data.bop.upper_ram_open,
-                pipe_ram_close: data.bop.upper_ram_close,
-                blind_ram_open: data.bop.lower_ram_open,
-                blind_ram_close: data.bop.lower_ram_close,
+                pipe_ram_open: data.bop.lower_ram_open,
+                pipe_ram_close: data.bop.lower_ram_close,
+                blind_ram_open: null,
+                blind_ram_close: null,
                 shear_ram_open: null,
                 source: 'versamax'
             };

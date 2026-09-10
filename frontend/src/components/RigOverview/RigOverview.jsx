@@ -1153,8 +1153,7 @@ export default function RigOverview() {
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.85, flex: 1 }}>
                         {[
                             ['ANNULAR', bopBool('annular_close')],
-                            ['UPPER RAM', bopBool('upper_ram_close')],
-                            ['LOWER RAM', bopBool('lower_ram_close')],
+                            ['PIPE RAM', bopBool('lower_ram_close')],
                             ['ACCUMULATOR', bopNumber('accumulator_pressure', 'PSI')],
                             ['MANIFOLD', bopNumber('manifold_pressure', 'PSI')],
                             ['ANNULAR PRESS', bopNumber('annular_pressure', 'PSI')]

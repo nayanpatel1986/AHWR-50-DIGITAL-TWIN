@@ -186,8 +186,8 @@ const WellControlDashboard = () => {
                 manifold_pressure: Number((bop?.manifold_pressure ?? wc.manifold_pressure)) || 0,
                 accumulator_pressure: Number((bop?.accumulator_pressure ?? wc.accumulator_pressure)) || 0,
                 annular: { open: Number((bop?.annular_open ?? wc.annular_open)) > 0, close: Number((bop?.annular_close ?? wc.annular_close)) > 0 },
-                pipe: { open: Number((bop?.upper_ram_open ?? wc.pipe_ram_open)) > 0, close: Number((bop?.upper_ram_close ?? wc.pipe_ram_close)) > 0 },
-                blind: { open: Number((bop?.lower_ram_open ?? wc.blind_ram_open)) > 0, close: Number((bop?.lower_ram_close ?? wc.blind_ram_close)) > 0 },
+                pipe: { open: Number((bop?.lower_ram_open ?? wc.pipe_ram_open)) > 0, close: Number((bop?.lower_ram_close ?? wc.pipe_ram_close)) > 0 },
+                blind: { open: false, close: false },
                 shear: Number(wc.shear_ram_open) > 0
             });
         }

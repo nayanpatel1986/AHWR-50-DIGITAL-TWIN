@@ -340,7 +340,7 @@
         },
         {
           "id": "lower_ram_open",
-          "label": "Lower Ram Open",
+          "label": "Lower Pipe Ram Open",
           "unit": "state",
           "precision": 0,
           "defaultMin": 0,
@@ -349,7 +349,7 @@
         },
         {
           "id": "lower_ram_close",
-          "label": "Lower Ram Close",
+          "label": "Lower Pipe Ram Close",
           "unit": "state",
           "precision": 0,
           "defaultMin": 0,
