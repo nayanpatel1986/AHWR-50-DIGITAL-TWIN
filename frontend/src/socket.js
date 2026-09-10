@@ -24,6 +24,11 @@ export function isLiveRigPayload(payload) {
     return meta.connected === true && meta.source !== 'none' && meta.stale !== true;
 }
 
+export function isLiveBopPayload(payload) {
+    const meta = payload?._meta || {};
+    return meta.bop_live === true && payload?.bop?.connected === true;
+}
+
 socket.on('rig_data', (payload) => {
     if (payload && Object.keys(payload).length) {
         latestRigData = payload;

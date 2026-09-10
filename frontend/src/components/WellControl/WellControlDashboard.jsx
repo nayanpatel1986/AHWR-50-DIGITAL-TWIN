@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Typography, Grid, Paper, useTheme, ButtonGroup, Button, IconButton } from '@mui/material';
 import { Clock, RefreshCw } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { getLatestRigData, isLiveRigPayload, socket } from '../../socket';
+import { getLatestRigData, isLiveBopPayload, isLiveRigPayload, socket } from '../../socket';
 import KillSheet from './KillSheet';
 import BOPStack from './BOPStack';
 import axios from '../../api';
@@ -161,7 +161,8 @@ const WellControlDashboard = () => {
 
     const applyData = (newData) => {
         if (!newData) return;
-        if (!isLiveRigPayload(newData)) {
+        const livePayload = isLiveRigPayload(newData) || isLiveBopPayload(newData);
+        if (!livePayload) {
             setFeed(prev => ({ ...prev, available: false, stale: true, hasData: false }));
             setWcData({});
             setWellhead({ hasData: false });
@@ -174,7 +175,7 @@ const WellControlDashboard = () => {
         setFeed(prev => ({
             connected: socket.connected,
             available,
-            stale: meta ? !!meta.stale : prev.stale,
+            stale: meta ? meta.bop_live !== true : prev.stale,
             hasData: true,
             quality: bop?.quality || (available ? 'good' : 'disconnected')
         }));

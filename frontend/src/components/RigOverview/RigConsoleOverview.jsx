@@ -2,7 +2,7 @@
 import { Checkbox, FormControl, ListItemText, ListSubheader, MenuItem, Select, useTheme } from '@mui/material';
 import { SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getLatestAlarms, getLatestRigData, isLiveRigPayload, socket } from '../../socket';
+import { getLatestAlarms, getLatestRigData, isLiveBopPayload, isLiveRigPayload, socket } from '../../socket';
 import axios from '../../api';
 import { useAlarms, ALARM_BLINK } from '../../context/AlarmContext';
 import { priorityColor } from '../../utils/alarms';
@@ -276,13 +276,15 @@ export default function RigConsoleOverview() {
     const cachedRig = getLatestRigData();
     const cachedAlarms = getLatestAlarms();
     const cachedRigIsLive = isLiveRigPayload(cachedRig);
-    const [raw, setRaw] = useState(() => cachedRigIsLive ? cachedRig : {});
+    const cachedBopIsLive = isLiveBopPayload(cachedRig);
+    const cachedPayloadIsLive = cachedRigIsLive || cachedBopIsLive;
+    const [raw, setRaw] = useState(() => cachedPayloadIsLive ? cachedRig : {});
     const [alarms, setAlarms] = useState(() => Array.isArray(cachedAlarms?.active) ? cachedAlarms.active : []);
     const [identity, setIdentity] = useState({ rig: '', well: '' });
     const [feed, setFeed] = useState(() => ({
         connected: socket.connected,
         stale: !cachedRigIsLive || !!cachedRig?._meta?.stale,
-        hasData: cachedRigIsLive
+        hasData: cachedPayloadIsLive
     }));
 
     // Working-day trend series: { id: [{t,v}] }, seeded from /api/history.
@@ -378,17 +380,18 @@ export default function RigConsoleOverview() {
 
     useEffect(() => {
         const cached = getLatestRigData();
-        if (isLiveRigPayload(cached) && Object.keys(cached).length) {
+        const cachedPayloadIsLive = isLiveRigPayload(cached) || isLiveBopPayload(cached);
+        if (cachedPayloadIsLive && Object.keys(cached).length) {
             setRaw(cached);
-            setFeed((p) => ({ ...p, hasData: true, stale: !!cached._meta?.stale }));
+            setFeed((p) => ({ ...p, hasData: true, stale: !isLiveRigPayload(cached) || !!cached._meta?.stale }));
             pushHist(cached);
         }
         axios.get('/api/rig/latest', { timeout: 3000 })
             .then(({ data }) => {
                 if (data && Object.keys(data).length) {
-                    const livePayload = isLiveRigPayload(data);
+                    const livePayload = isLiveRigPayload(data) || isLiveBopPayload(data);
                     setRaw(livePayload ? data : {});
-                    setFeed((p) => ({ ...p, hasData: livePayload, stale: !livePayload || !!data._meta?.stale }));
+                    setFeed((p) => ({ ...p, hasData: livePayload, stale: !isLiveRigPayload(data) || !!data._meta?.stale }));
                     if (livePayload) pushHist(data);
                 }
             })
@@ -401,9 +404,9 @@ export default function RigConsoleOverview() {
 
         const onRig = (data) => {
             if (!data || !Object.keys(data).length) { setFeed((p) => ({ ...p, hasData: false })); return; }
-            const livePayload = isLiveRigPayload(data);
+            const livePayload = isLiveRigPayload(data) || isLiveBopPayload(data);
             setRaw(livePayload ? data : {});
-            setFeed({ connected: socket.connected, hasData: livePayload, stale: !livePayload || !!data._meta?.stale });
+            setFeed({ connected: socket.connected, hasData: livePayload, stale: !isLiveRigPayload(data) || !!data._meta?.stale });
             if (livePayload) pushHist(data);
         };
         const onAlarms = (p) => setAlarms(Array.isArray(p?.active) ? p.active : []);
@@ -434,7 +437,7 @@ export default function RigConsoleOverview() {
 
     const esd = num(sf.esd_active) === 1 || num(sf.lockout_active) === 1;
     // Well-control values are only trustworthy when the backend says a BOP source exists.
-    const wcLive = live && wc.available !== false;
+    const wcLive = socket.connected && raw?._meta?.bop_live === true && wc.available !== false;
     const wcv = (v, dp = 0) => (wcLive && Number.isFinite(Number(v)) ? fmt(v, dp) : '--');
 
     const blockMm = num(dw.block_position);
@@ -505,7 +508,7 @@ export default function RigConsoleOverview() {
     ];
     const wcStat = !feed.connected ? { text: 'SOCKET DOWN', color: '#ef4444' }
         : wc.available === false ? { text: 'NO BOP SOURCE', color: '#ef4444' }
-            : feed.stale ? { text: 'FEED STALE', color: '#fbbf24' }
+            : !wcLive ? { text: 'FEED STALE', color: '#fbbf24' }
                 : esd ? { text: 'ESD ACTIVE', color: '#ef4444' }
                     : rams.some((r) => r.state === 'CLOSED') ? { text: 'CLOSED - MONITOR', color: '#fbbf24' }
                         : { text: 'NORMAL', color: '#4ade80' };
