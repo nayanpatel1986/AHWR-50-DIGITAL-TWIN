@@ -672,12 +672,6 @@ export default function AdminPanel() {
             {/* TAB 1: VersaMax / KEPServerEX OPC UA BOP Configuration */}
             <TabPanel value={value} index={1}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, gap: 2, alignItems: 'flex-start' }}>
-                    <Box>
-                        <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 0.5, color: '#fbbf24' }}>OPC UA / VersaMax BOP Parameters</Typography>
-                        <Typography variant="body2" sx={{ color: '#94a3b8' }}>
-                            Configure the KEPServerEX OPC UA source. Siemens S7comm configuration is independent and unchanged.
-                        </Typography>
-                    </Box>
                     <Box sx={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                         <Button variant="outlined" startIcon={<RefreshCw />} onClick={fetchBopConfig} sx={{ color: '#38bdf8', borderColor: '#334155' }}>Reload</Button>
                         <Button variant="contained" startIcon={<Save />} onClick={saveBopConfiguration} disabled={loading} sx={{ bgcolor: '#34d399', '&:hover': { bgcolor: '#10b981' } }}>
@@ -717,9 +711,6 @@ export default function AdminPanel() {
                             </FormControl>
                         </Grid>
                     </Grid>
-                    <Alert severity="info" sx={{ mt: 2, bgcolor: 'rgba(14,165,233,0.10)', color: '#bae6fd' }}>
-                        Enter the real Kepware Node IDs below, for example <code>ns=2;s=Channel1.Device1.R1</code>. Do not use the display path unless Kepware confirms it is the Node ID.
-                    </Alert>
                 </Paper>
 
                 <Paper sx={{ p: 3, bgcolor: '#1e293b', border: '1px solid #334155' }}>
