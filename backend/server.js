@@ -534,7 +534,12 @@ const queryData = async () => {
             });
         });
 
-        const hasSensorData = !!(data.drawworks || data.engine || data.mudpump || data.drilling || data.AHWR);
+        // BOP/VersaMax is an independent live source.  It must keep the
+        // live-feed clock fresh even when the drilling PLC/S7 measurements
+        // are not connected, otherwise Well Control hides valid BOP values
+        // behind the global stale banner.
+        const hasBopData = !!(data.bop && Object.keys(data.bop).length > 0);
+        const hasSensorData = !!(data.drawworks || data.engine || data.mudpump || data.drilling || data.AHWR || hasBopData);
         const now = Date.now();
         if (hasSensorData) lastDataAt = now;
         const stale = (now - lastDataAt) > FRESH_MS;
