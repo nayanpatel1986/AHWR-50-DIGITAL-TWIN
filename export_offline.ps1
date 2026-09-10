@@ -25,7 +25,7 @@ Write-Host "========================================================"
 Push-Location $projectRoot
 try {
     Run-Step "[1/8] Building current application images..." {
-        docker compose build backend frontend
+        docker compose build backend frontend bop-collector
     }
 
     Run-Step "[2/8] Stopping application for a consistent backup..." {
@@ -81,7 +81,8 @@ try {
             influxdb:2.7 `
             telegraf:offline-flat `
             ahwr-50-twin-backend:offline-flat `
-            ahwr-50-twin-frontend:offline-flat
+            ahwr-50-twin-frontend:offline-flat `
+            ahwr-50-twin-bop-collector:offline-flat
     }
 
     Run-Step "[5/8] Backing up users and application settings..." {
